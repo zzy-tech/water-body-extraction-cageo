@@ -1,0 +1,177 @@
+# 模型集成配置文件
+# 使用改进的性能加权集成方法
+
+# data paths
+data:
+  data_dir: dataset
+  images: dataset/Image
+  masks: dataset/Mask
+  splits:
+    train: splits/train.txt
+    val: splits/val.txt
+    test: splits/test.txt
+
+# 预测参数设置
+predict:
+  # 二值化阈值
+  threshold: 0.5
+  
+  # 差异化阈值
+  diff_threshold: 0.20
+  
+  # 置信度阈值
+  conf_threshold: 0.15
+  
+  # 滑窗推理的瓦片大小
+  tile_size: 256
+  
+  # 处理大影像时的瓦片重叠大小
+  overlap: 128
+  
+  # 批量大小
+  batch_size: 1
+  
+  # CRF迭代次数，0表示不使用CRF
+  crf_iterations: 0
+  
+  # 是否保存可视化结果
+  save_visualization: true
+  
+  # 最大可视化图像数量
+  max_visualizations: 6
+  
+  # 是否保存预测结果(.tif文件)
+  save_predictions: true
+  
+  # 集成策略
+  # 可选值: 'mean', 'weighted_mean', 'vote', 'logits_mean', 'stacking', 'adaptive', 'advanced_adaptive', 'performance_weighted', 'improved_performance_weighted'
+  ensemble_strategy: improved_performance_weighted
+  
+  # 要使用的波段索引列表
+  bands: [1, 2, 3, 4, 5, 6]
+  
+  # 堆叠集成配置（当ensemble_strategy为'stacking'时使用）
+  stacking:
+    fusion_layers: 3
+    hidden_units: 128
+    dropout_rate: 0.3
+    use_batch_norm: true
+  
+  # 自适应权重集成配置（当ensemble_strategy为'adaptive'时使用）
+  adaptive:
+    input_channels: 6
+    hidden_units: 64
+    dropout_rate: 0.2
+  
+  # 高级自适应权重集成配置（当ensemble_strategy为'advanced_adaptive'时使用）
+  advanced_adaptive:
+    input_channels: 6
+    hidden_units: 128
+    dropout_rate: 0.3
+    use_attention: true
+  
+
+    
+  # 改进的基于性能的加权集成配置（当ensemble_strategy为'improved_performance_weighted'时使用）
+  improved_performance_weighted:
+    model_names: ['aer_unet', 'ultra_lightweight_deeplabv3_plus']
+    csv_paths: [
+      'aer_unet_result/examples/aer_unet/evaluation_results_aer_unet_20260130_164129.csv',
+      'ulw_result/examples/ultra_lightweight_deeplabv3_plus/evaluation_results_ultra_lightweight_deeplabv3_plus_20260130_165648.csv'
+    ]
+    metric_name: 'iou'  # 使用IoU作为性能指标
+    metric_weights:  # 多指标权重配置
+      iou: 0.5
+      dice: 0.3
+      f1_score: 0.2
+    temperature: 1.0  # 温度参数，用于调整权重分布的尖锐程度
+    ensemble_method: 'gated_ensemble'  # 集成方法: 'logits_weighted', 'prob_weighted' 或 'gated_ensemble'
+    diff_threshold: 0.20  # 差异阈值，超过此阈值认为两个模型预测分歧较大
+    conf_threshold: 0.15  # 置信度阈值，低于此值认为模型不确定
+  
+  # 预测结果输出目录
+  output_dir: "gate_keshihua"
+
+# 集成配置
+ensemble:
+  strategy: improved_performance_weighted
+  # 改进的基于性能的加权集成配置（当ensemble_strategy为'improved_performance_weighted'时使用）
+  improved_performance_weighted:
+    model_names: ['aer_unet', 'ultra_lightweight_deeplabv3_plus']
+    csv_paths: [
+      'aer_unet_result/examples/aer_unet/evaluation_results_aer_unet_20260130_164129.csv',
+      'ulw_result/examples/ultra_lightweight_deeplabv3_plus/evaluation_results_ultra_lightweight_deeplabv3_plus_20260130_165648.csv'
+    ]
+    metric_name: 'iou'  # 使用IoU作为性能指标
+    metric_weights:  # 多指标权重配置
+      iou: 0.5
+      dice: 0.3
+      f1_score: 0.2
+    temperature: 1.0  # 温度参数，用于调整权重分布的尖锐程度
+    ensemble_method: 'gated_ensemble'  # 集成方法: 'logits_weighted', 'prob_weighted' 或 'gated_ensemble'
+    diff_threshold: 0.20  # 差异阈值，超过此阈值认为两个模型预测分歧较大
+    conf_threshold: 0.15  # 置信度阈值，低于此值认为模型不确定
+
+# 评估参数设置
+eval:
+  # 二值化阈值
+  THRESHOLD: 0.6
+
+# 模型配置
+models:
+  # AER U-Net模型配置（包含鄱阳湖样本）
+  - name: "aer_unet"
+    checkpoint_path: "checkpoints/aer_unet/aer_unet_best.pth"
+    ens_weight: 0.5  # 集成权重
+    n_channels: 6    # 输入通道数
+    n_classes: 1     # 输出类别数
+    base_features: 32 # 基础特征数
+    dropout_rate: 0.3 # Dropout率
+  
+  # Ultra Lightweight DeepLabV3+模型配置（包含鄱阳湖样本）
+  - name: "ultra_lightweight_deeplabv3_plus"
+    checkpoint_path: "checkpoints/ultra_lightweight_deeplabv3_plus/ultra_lightweight_deeplabv3_plus_best.pth"
+    ens_weight: 0.5  # 集成权重
+    n_channels: 6    # 输入通道数
+    n_classes: 1     # 输出类别数
+    pretrained_backbone: true  # 是否使用预训练骨干网络
+    use_cbam: true            # 是否使用CBAM注意力机制
+    # 以下参数需要与训练时使用的参数保持一致
+    aspp_out: 64             # ASPP模块输出通道数
+    dec_ch: 64               # 解码器通道数
+    low_ch_out: 32            # 低层特征输出通道数
+    cbam_reduction_ratio: 16  # CBAM降维比率
+
+# 数据路径设置
+#data:
+#  # 数据集根目录路径（不是直接的图像目录）
+#  data_dir: "dataset"
+#
+#  # 图像目录路径（可选，如果提供将覆盖默认路径）
+#  images_dir: "dataset/Image"
+#
+#  # 掩码目录路径（可选，如果提供将覆盖默认路径）
+#  masks_dir: "dataset/Mask"
+#
+#  # 划分文件目录路径
+#  splits_dir: "splits"
+#
+#  # 测试集文件列表
+#  test_list: "splits/test.txt"
+#
+#  # 输入影像文件路径（测试集目录）
+#  input_dir: "dataset/Image"
+#
+#  # 预测结果保存目录
+#  output_dir: "gate_keshihua"
+#
+#  # 输入影像文件匹配模式（仅在输入为目录时使用）
+#  file_pattern: "*.tif"
+
+# 设备设置
+device:
+  # 计算设备
+  type: "cuda"  # 可选值: "cuda", "cpu"
+  
+  # 如果使用多个GPU，指定GPU索引
+  gpu_ids: [0]

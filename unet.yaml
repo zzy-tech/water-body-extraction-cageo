@@ -1,0 +1,108 @@
+# === U-Net Baseline 模型配置 ===
+# 标准U-Net模型的配置参数，用于与其他模型进行对比
+
+# === 数据设置 ===
+data:
+  data_dir: dataset          # 数据集根目录
+  images: dataset/Image      # Sentinel-2 六通道 GeoTIFF
+  masks: dataset/Mask        # 二值掩膜 (0/1)
+  num_workers: 4
+  pin_memory: true
+  persistent_workers: true
+  splits:
+    train: splits/train.txt
+    val: splits/val.txt
+    test: splits/test.txt
+
+# === 数据增强 ===
+augment:
+  horizontal_flip: true
+  vertical_flip: true
+  rotation_range: 15
+  width_shift_range: 0.1
+  height_shift_range: 0.1
+  scale_range: [0.9, 1.1]
+  noise_std: 0.01
+  saturation_range: [0, 0]
+  hue_range: [0, 0]
+  elastic_alpha: 0.0
+  elastic_sigma: 0.0
+  use_advanced_aug: false
+  mixup_alpha: 0.0
+  mixup_prob: 0.0
+  cutmix_alpha: 0.0
+  cutmix_prob: 0.0
+
+train:
+  batch_size: 8
+  epochs: 50
+  lr: 0.0005
+  lr_backbone: 0.00025
+  lr_head: 0.0005
+  weight_decay: 0.00005
+  val_ratio: 0.1
+  save_dir: checkpoints
+  seed: 42
+  gradient_accumulation_steps: 2
+  patience: 15
+  scheduler_type: plateau
+  scheduler_patience: 5
+  scheduler_factor: 0.5
+  loss_type: bce_dice
+  bce_weight: 0.5
+  dice_weight: 0.5
+  dice_smooth: 1e-06
+  focal_alpha: 0.25
+  focal_gamma: 2.0
+  use_amp: true
+  min_lr: 1e-7
+  scheduler_cooldown: 0
+  save_improvement_threshold: 0.0005
+  save_interval_epochs: 5
+  optimizer: adamw
+  max_grad_norm: 1.0
+  gradient_clipping: true
+  freeze_backbone: false
+  freeze_backbone_epochs: 0
+  early_stopping: true
+  early_stopping_patience: 10
+  pos_weight: 2.0
+  use_tta: false
+  tta_types: ['h_flip', 'v_flip', 'transpose']
+  ema: false
+  ema_decay: 0.999
+  rdrop_alpha: 0.0
+  freeze_bn_stats: false
+  crf_iterations: 0
+  use_advanced_aug: false
+  mixup_alpha: 0.0
+  cutmix_alpha: 0.0
+  mixup_prob: 0.0
+  cutmix_prob: 0.0
+
+# === 模型配置 ===
+model:
+  name: unet
+  n_classes: 1
+  in_ch: 6
+  bilinear: false
+  ens_weight: 1.0
+
+# === 评估参数 ===
+eval:
+  THRESHOLD: 0.5
+
+# === 预测参数 ===
+predict:
+  tile_size: 256
+  overlap: 128
+  use_sliding_window: true
+  postprocessing:
+    gaussian_sigma: 1.0
+    median_kernel_size: 3
+    morph_close_kernel_size: 3
+    morph_open_kernel_size: 0
+    min_object_size: 50
+    hole_area_threshold: 30
+    adaptive_threshold: false
+  apply_postprocessing_during_training: false

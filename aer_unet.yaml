@@ -1,0 +1,95 @@
+# === AER-UNet模型配置 ===
+# 专门为AER-UNet模型优化的配置参数
+
+# === 数据设置 ===
+data:
+  data_dir: dataset          # 数据集根目录
+  images: dataset/Image        # 存放 Sentinel-2 六通道 GeoTIFF（B2,B3,B4,B8,B11,B12） 
+  masks:  dataset/Mask         # 存放与影像同名的二值掩膜 (0/1)
+  num_workers: 0             # 根据训练参数设置为0
+  pin_memory: true          # 启用内存锁定以加速数据传输到GPU
+  prefetch_factor: 4         # 增加预取因子以提高数据加载效率
+  persistent_workers: false  # 禁用持久化工作进程，因为num_workers=0
+  force_multiprocess: false   # 禁用强制多进程数据加载以避免与num_workers=0冲突
+  splits:
+    train: splits/train.txt  # 训练集划分文件
+    val: splits/val.txt      # 验证集划分文件
+    test: splits/test.txt    # 测试集划分文件
+
+# === 数据增强 ===
+# 注意：以下增强配置当前未在代码中引用，如需使用需扩展数据管线
+augment:
+  horizontal_flip: true
+  vertical_flip: true
+  rotation_range: 15
+  width_shift_range: 0.1
+  height_shift_range: 0.1
+  scale_range: [0.9, 1.1]
+  noise_std: 0.0
+  saturation_range: null
+  hue_range: null
+  elastic_alpha: 0.0
+  elastic_sigma: 0.0
+  use_advanced_aug: false
+  mixup_alpha: 0.0
+  mixup_prob: 0.0
+  cutmix_alpha: 0.0
+  cutmix_prob: 0.0
+
+train:
+  batch_size: 2              # 进一步减小批次大小以避免内存不足
+  epochs: 20                 # 修改为20轮训练
+  lr: 5e-05                  # 保持与提供的训练参数一致
+  weight_decay: 0.0001       # 保持与提供的训练参数一致
+  save_dir: checkpoints    # 基础保存目录，模型会创建自己的子目录
+  seed: 43                   # 随机种子
+  gradient_accumulation_steps: 4  # 增加梯度累积步数以保持有效批次大小
+  patience: 20               # 早停耐心值
+  early_stopping: true          # 保持早停设置
+  early_stopping_patience: 20   # 保持早停耐心值
+  scheduler_type: plateau     # 使用plateau调度器，根据验证指标调整学习率
+  scheduler_patience: 20      # 恢复为之前成功训练的调度器耐心值
+  scheduler_factor: 0.1      # 恢复为之前成功训练的调度器因子
+  min_lr: 5e-6               # 保持最小学习率限制
+  scheduler_cooldown: 0      # 移除调度器冷却期，匹配历史成功配置
+  scheduler_metric: dice     # 恢复为默认监控Dice系数
+  
+  # === EMA配置 ===
+  ema: false                 # 禁用EMA，匹配之前成功训练的配置
+  
+  # === 损失函数配置 ===
+  loss_type: bce            # 更新为提供的训练参数
+  bce_weight: 1.0           # 设置为1.0，因为loss_type为bce
+  focal_weight: 0.5         # 保持与提供的训练参数一致
+  lovasz_weight: 0.5        # 保持与提供的训练参数一致
+  dice_smooth: 1e-6          # 避免对小区域过度平滑
+  focal_alpha: 1.0           # 保持与提供的训练参数一致
+  focal_gamma: 2.0           # 保持与提供的训练参数一致
+  pos_weight: 1.0            # 恢复为默认值
+  
+  # === 阈值搜索配置 ===
+  enable_threshold_search: true
+  threshold_search_interval: 0.05
+  threshold_range: [0.0, 1.0]  # 调整阈值范围以提高召回率
+  
+  use_amp: true               # 启用混合精度训练以减少内存使用
+  gradient_clipping: false    # 更新为提供的训练参数
+  max_grad_norm: 1.0         # 保持与提供的训练参数一致
+  
+  # === 检查点保存策略 ===
+  save_improvement_threshold: 0.01  # 保持与提供的训练参数一致
+  save_interval_epochs: 10          # 保持与提供的训练参数一致
+  
+  # === 骨干网络冻结设置 ===
+  freeze_backbone: false            # 更新为提供的训练参数
+
+# === 模型配置 ===
+model:
+  name: aer_unet
+  in_ch: 6                    # 更新为提供的训练参数
+  n_classes: 1                # 更新为提供的训练参数
+  base_features: 32           # 更新为提供的训练参数
+  dropout_rate: 0.3           # 更新为提供的训练参数
+  ens_weight: 1.0             # 集成时的权重
+  optimizer: adam             # 更新为提供的训练参数
+  

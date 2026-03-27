@@ -1,0 +1,232 @@
+# === Ultra Lightweight DeepLabV3+ with CBAM模型配置 ===
+
+# 专门为Ultra Lightweight DeepLabV3+ with CBAM模型优化的配置参数
+
+
+
+# === 数据设置 ===
+
+data:
+
+  data_dir: dataset          # 数据集根目录
+
+  images: dataset/Image        # 存放 Sentinel-2 六通道 GeoTIFF（B2,B3,B4,B8,B11,B12）
+
+  masks:  dataset/Mask         # 存放与影像同名的二值掩膜 (0/1)
+
+  num_workers: 4  # 增加工作进程数以提高数据加载速度
+
+  pin_memory: true  # 启用内存固定以加速数据传输到GPU
+
+  persistent_workers: true  # 保持工作进程在epoch之间存活，减少启动开销
+
+  splits:
+
+    train: splits/train.txt            # 训练集划分文件
+
+    val: splits/val.txt                # 验证集划分文件
+
+    test: splits/test.txt              # 测试集划分文件
+
+
+
+# === 数据增强 ===
+
+augment:
+  horizontal_flip: true
+  vertical_flip: true
+  rotation_range: 15
+  width_shift_range: 0.1
+  height_shift_range: 0.1
+  scale_range: [0.9, 1.1]
+  noise_std: 0.01
+  saturation_range: [0, 0]
+  hue_range: [0, 0]
+  elastic_alpha: 0.0
+  elastic_sigma: 0.0
+
+train:
+
+  batch_size: 8                        # 批量大小
+
+  epochs: 50                           # 训练轮数
+
+  lr: 0.0005                           # 基础学习率
+
+  lr_backbone: 0.00025                 # 骨干网络学习率
+
+  lr_head: 0.0005                      # 头部学习率
+
+  weight_decay: 0.00005                # 权重衰减
+
+  val_ratio: 0.1                       # 验证集比例
+
+  save_dir: checkpoints                # 模型保存目录
+
+  seed: 42                             # 随机种子
+
+  gradient_accumulation_steps: 2       # 梯度累积步数
+
+  patience: 15                         # 早停耐心值
+
+  scheduler_type: plateau              # 学习率调度器类型
+
+  scheduler_patience: 5                # 调度器耐心值
+
+  scheduler_factor: 0.5                # 学习率衰减因子
+
+  loss_type: bce_dice                  # 损失函数类型
+
+  bce_weight: 0.5                      # BCE损失权重
+
+  dice_weight: 0.5                     # Dice损失权重
+
+  dice_smooth: 1e-06                   # Dice平滑参数
+
+  focal_alpha: 0.25                    # focal loss alpha参数
+
+  focal_gamma: 2.0                     # focal loss gamma参数
+
+  use_amp: true                        # 是否使用自动混合精度
+
+  min_lr: 1e-7                         # 最小学习率
+
+  scheduler_cooldown: 0                # 调度器冷却期
+
+  
+
+  # === 检查点保存策略 ===
+
+  save_improvement_threshold: 0.0005    # 性能提升阈值
+
+  save_interval_epochs: 5              # 固定间隔保存轮数
+
+  
+
+  # === 优化器设置 ===
+
+  optimizer: adamw                     # 优化器类型
+
+  max_grad_norm: 1.0                   # 梯度裁剪最大范数
+
+  gradient_clipping: true              # 是否启用梯度裁剪
+
+  
+
+  # === 骨干网络冻结设置 ===
+
+  freeze_backbone: true                # 是否冻结骨干网络
+
+  freeze_backbone_epochs: 2            # 冻结骨干网络的轮数
+
+  
+
+  # === 其他训练设置 ===
+
+  early_stopping: true                 # 是否启用早停
+
+  early_stopping_patience: 10          # 早停耐心值
+
+  pos_weight: 2.0                     # 正样本权重
+
+  use_tta: false                       # 是否使用测试时增强
+
+  tta_types: ['h_flip', 'v_flip', 'transpose']  # TTA类型
+
+  ema: false                           # 是否使用EMA
+
+  ema_decay: 0.999                     # EMA衰减率
+
+  rdrop_alpha: 0.0                     # R-Drop alpha参数
+
+  freeze_bn_stats: false               # 是否冻结BN统计量
+
+  crf_iterations: 0                    # CRF迭代次数
+
+  use_advanced_aug: false              # 是否使用高级数据增强
+
+  mixup_alpha: 0.0                     # MixUp alpha参数
+
+  cutmix_alpha: 0.0                    # CutMix alpha参数
+
+  mixup_prob: 0.0                      # MixUp概率
+
+  cutmix_prob: 0.0                     # CutMix概率
+
+
+
+# === 模型配置 ===
+
+model:
+
+  name: ultra_lightweight_deeplabv3_plus
+
+  n_classes: 1                         # 输出类别数
+
+  in_ch: 6                             # 输入通道数
+
+  output_stride: 16                    # 输出步长
+
+  pretrained_backbone: true           # 是否使用预训练骨干网络
+
+  aspp_out: 64                        # ASPP输出通道数
+
+  dec_ch: 64                           # 解码器通道数（与ASPP输出通道数保持一致）
+
+  low_ch_out: 32                       # 低级特征输出通道数
+
+  use_cbam: true                       # 是否使用CBAM注意力机制
+
+  cbam_reduction_ratio: 16             # CBAM降维比率
+
+  base_filters: 16                     # 基础过滤器数量（对应base_features）
+
+  dropout_rate: 0.2                    # Dropout率
+
+  ens_weight: 1.0                      # 集成权重
+
+
+
+# === 评估参数 ===
+
+eval:
+
+  THRESHOLD: 0.55  # 使用0.35作为默认阈值进行评估
+
+
+
+# === 预测参数 ===
+
+predict:
+
+  tile_size: 256      # 如果有更大的 GPU 可以设更大
+
+  overlap: 128         # 窗口之间重叠 128 像素
+
+  use_sliding_window: true
+
+  
+
+  # === 后处理参数 ===
+
+  postprocessing:
+
+    gaussian_sigma: 1.0           # 高斯平滑标准差，用于概率域平滑
+
+    median_kernel_size: 3         # 中值滤波核大小，用于去除小噪声
+
+    morph_close_kernel_size: 3    # 闭运算核大小，用于填充小孔
+
+    morph_open_kernel_size: 0     # 开运算核大小，0表示不使用开运算
+
+    min_object_size: 50           # 最小物体大小，小于此值的物体将被过滤
+
+    hole_area_threshold: 30       # 孔洞面积阈值，小于此值的孔洞将被填充
+
+    adaptive_threshold: false      # 是否使用自适应阈值
+
+  
+
+  # === 训练阶段后处理控制 ===
+
+  apply_postprocessing_during_training: false  # 训练阶段是否应用后处理（设置为false可提高训练速度）
